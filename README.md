@@ -2,7 +2,7 @@
 
 A systematic study of cross-sectional and time-series factors in the cryptocurrency market, built from scratch on exchange data. The project tests classic equity-factor methods on ~31 major crypto assets, with rigorous controls for lookahead bias, survivorship bias, and transaction costs — and honestly reports where these factors work and where they fail.
 
-**Data:** Daily OHLCV for ~31 major USDT pairs from Binance (via `ccxt`), 2020–2026.
+**Data:** Daily OHLCV for ~31 major USDT pairs from Binance (via `ccxt`), 2020–2026. Data was collected via an overseas server to bypass regional API restrictions on Binance.
 
 ---
 
