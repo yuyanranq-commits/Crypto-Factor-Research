@@ -47,8 +47,8 @@ crypto-factor-research/
 │   ├── dataclean.py          # build wide tables, diagnose & drop bad tickers
 │   └── factor.py             # momentum / volatility / reversal + liquidity filter
 └── notebooks/
-    ├── 01_cross_sectional.ipynb   # multi-factor test, mean-vs-median, long-short, neutralization
-    └── 02_time_series.ipynb       # time-series momentum, robustness, TS-vs-CS comparison
+    ├── backtest.ipynb   # multi-factor test, mean-vs-median, long-short, neutralization
+    └── backtest2.ipynb       # time-series momentum, robustness, TS-vs-CS comparison
 ```
 
 ## How to Run
