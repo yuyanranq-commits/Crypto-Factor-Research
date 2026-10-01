@@ -1,0 +1,28 @@
+# ---- Data files (not tracked; regenerate by running the pipeline) ----
+data/
+*.csv
+*.parquet
+*.pkl
+*.xlsx
+
+# ---- Python cache ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+
+# ---- Virtual environments ----
+venv/
+.venv/
+env/
+
+# ---- Editor / OS ----
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ---- Secrets (never commit API keys!) ----
+.env
+*.key
+config_secret.py
