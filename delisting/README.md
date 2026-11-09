@@ -10,7 +10,7 @@ of which tokens get delisted. The database is built in SQL (DuckDB); the model u
 | Data | 587 tickers chained into 544 assets; 25,090 token-months; 136 delistings |
 | Labels | 192 tickers stopped trading: 144 delistings (8 of them only the USDT pair), 43 renames, 5 mergers, labeled by hand with sources |
 | Strongest signal | 1 SD more trading volume → delisting hazard × **0.27** (95% CI 0.20–0.37) |
-| Age matters | For tokens under 2 years old, a deep drawdown raises the hazard (HR 3.75); for older tokens, high volatility does (HR 1.85) |
+| Age matters | For tokens under 2 years old, trading close to the all-time high raises the hazard (HR 3.75 per SD of drawdown, where drawdown = price / running max − 1); for older tokens, high volatility does (HR 1.85) |
 | Out of sample | Trained before 2025, tested on 2025–26: AUC **0.728** vs 0.697 for volume alone; each month's riskiest 10% of tokens contains 34% of the delistings |
 
 ![Hazard ratios](figures/hazard_ratios.png)
