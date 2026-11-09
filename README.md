@@ -4,7 +4,7 @@ Daily cross-sectional factor research on Binance USDT spot pairs, 2020-01 to 202
 The universe includes coins that were later delisted, and each day only coins that were liquid *at that time* can be traded.
 
 The main point of the project is that the universe definition changes the conclusions a lot.
-An earlier version used about 30 coins that are large today. On that universe an equal-weighted basket returned +42% a year.
+Using only the 54 coins that are still liquid at the end of the sample, an equal-weighted basket returned +38% a year.
 On the point-in-time universe built here, the same basket returned **−33% a year**.
 
 A follow-up project in [`delisting/`](delisting/) uses the same data to model which tokens Binance delists.
@@ -14,7 +14,7 @@ A follow-up project in [`delisting/`](delisting/) uses the same data to model wh
 | | Result |
 |---|---|
 | Universe | ~690 USDT spot pairs scraped (198 already delisted); 567 coins enter the tradable universe at some point; median 78 tradable coins per day |
-| Survivorship bias | Equal-weighted benchmark CAGR **+42%** (today's large coins) vs **−33%** (point-in-time universe) |
+| Survivorship bias | Equal-weighted benchmark CAGR **+38%** (54 coins liquid today) vs **−33%** (point-in-time universe) |
 | Volatility factor | Rank IC **−0.12**: low-volatility coins outperform. Still −0.11 after neutralizing for size |
 | Low-vol long-only | CAGR 9.8%, Sharpe 0.50 vs benchmark CAGR −33%, Sharpe −0.02 |
 | Momentum | Time-series momentum beats cross-sectional momentum at every lookback (30–180 days). Cross-sectional momentum loses money at every lookback |
