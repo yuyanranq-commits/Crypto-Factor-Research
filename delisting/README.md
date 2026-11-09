@@ -11,7 +11,7 @@ of which tokens get delisted. The database is built in SQL (DuckDB); the model u
 | Labels | 192 tickers stopped trading: 144 delistings (8 of them only the USDT pair), 43 renames, 5 mergers, labeled by hand with sources |
 | Strongest signal | 1 SD more trading volume → delisting hazard × **0.27** (95% CI 0.20–0.37) |
 | Age matters | For tokens under 2 years old, trading close to the all-time high raises the hazard (HR 3.75 per SD of drawdown, where drawdown = price / running max − 1); for older tokens, high volatility does (HR 1.85) |
-| Out of sample | Trained before 2025, tested on 2025–26: AUC **0.728** vs 0.697 for volume alone; each month's riskiest 10% of tokens contains 34% of the delistings |
+| Out of sample | Walk-forward, refit yearly: AUC **0.75** in both 2025 and 2026, vs 0.70 and 0.73 for volume alone; each month's riskiest 10% of tokens contains 36% of the 2025–26 delistings |
 
 ![Hazard ratios](figures/hazard_ratios.png)
 
@@ -52,9 +52,10 @@ because the delisting is announced in advance. The model uses features from 30 d
   with age (LR test p = 0.0001), so the main model lets them differ for tokens under 2 years old. The pattern holds with a 3-year cutoff.
 - **Robustness.** Hazard ratios keep their sign and rough size when USDT-pair removals are added as events, uncertain labels are dropped,
   left-truncated tokens are dropped, or unlagged features are used (`results_robustness.csv`).
-- **Out of sample.** The age interactions were found on the full sample. Before 2025 alone the proportional hazards test finds
-  nothing (p = 0.68), so the fair out-of-sample model is the five features without interactions (AUC 0.728).
-  With the interactions it reaches 0.772, which is optimistic.
+- **Out of sample.** Walk-forward validation with an expanding window, refit once a year: 2025 is scored by a model fit on
+  2020–24 (49 delistings), 2026 by a model refit on 2020–25 (90 delistings). The age interactions were found on the full sample;
+  before 2025 alone the proportional hazards test finds nothing (p = 0.68), so the fair out-of-sample model is the five features
+  without interactions. Adding the interactions raises the pooled AUC from 0.732 to 0.775, which is optimistic.
 
 ![Out-of-sample risk deciles](figures/oos_risk_deciles.png)
 
