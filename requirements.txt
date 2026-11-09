@@ -5,3 +5,6 @@ statsmodels
 matplotlib
 ccxt
 jupyter
+duckdb
+lifelines
+scikit-learn

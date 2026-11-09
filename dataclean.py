@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 close=pd.read_csv('data/wide_close.csv')
 volume=pd.read_csv('data/wide_volume.csv')
 
@@ -43,10 +44,51 @@ diag = pd.DataFrame(report).T.sort_values('valid days')
 print(diag)
 
 #Looking for residual stablecoins
-ret_std=close.pct_change(fill_method=None).std().sort_values()
+returns = close.pct_change(fill_method=None)
+ret_std=returns.std().sort_values()
 print(ret_std.head(15))
+
+# A second stablecoin test. The standard deviation is pulled up by a single depeg spike
+# (AEUR, a euro stablecoin, briefly hit 2.89 in 2024 and slipped through the std filter).
+# The MEDIAN absolute daily move ignores one-off spikes: AEUR = 0.27%, the next lowest coin (TRX) = 1.28%.
+ret_mad = returns.abs().median().sort_values()
+print(ret_mad.head(5))
+
 #Remove coins
 stable_like=ret_std[ret_std<0.005].index.tolist()
+stable_like += [c for c in ret_mad[ret_mad < 0.005].index if c not in stable_like]
+
+# Leveraged tokens whose whole name is BULL or BEAR. The scraper's is_leveraged() only
+# catches names like ETHBULL (a base coin + suffix), so plain BULL/BEAR got through.
+# Checking that the prefix is itself a coin avoids false hits like SYRUP (ends in "UP").
+bases = {c.split('/')[0] for c in close.columns}
+def is_leveraged_name(base):
+    if base in {'BULL', 'BEAR'}:
+        return True
+    return any(base.endswith(sfx) and base[:-len(sfx)] in bases for sfx in ['UP', 'DOWN', 'BULL', 'BEAR'])
+leveraged = [c for c in close.columns if is_leveraged_name(c.split('/')[0])]
+
+# Near-duplicate assets, e.g. BNSOL (Binance's staked SOL), which moves with SOL
+# (return correlation 0.999). Same idea as WBETH/BETH, already excluded in the scraper.
+# Rule: correlation > 0.98 over at least 90 shared days -> drop the one listed later.
+def near_duplicates(returns, listing_dates, threshold=0.98, min_days=90):
+    has = returns.notna()
+    drop = []
+    cols = returns.columns
+    for i, a in enumerate(cols):
+        for b in cols[i + 1:]:
+            both = has[a] & has[b]
+            if both.sum() < min_days:
+                continue
+            corr = np.corrcoef(returns.loc[both, a], returns.loc[both, b])[0, 1]
+            if corr > threshold:
+                later = a if listing_dates[a] > listing_dates[b] else b
+                print(f'near-duplicate: {a} ~ {b}  corr={corr:.4f} over {both.sum()} days -> drop {later}')
+                drop.append(later)
+    return drop
+listing_dates = close.apply(lambda s: s.first_valid_index())
+duplicates = near_duplicates(returns, listing_dates)
+
 diag['base']=diag.index.str.split('/').str[0]
 suspect=diag[diag['base'].str.endswith('B')&
              (pd.to_datetime(diag['crypto listing date'])>='2025-01-01')]
@@ -54,9 +96,10 @@ print('Suspicious stock tokens:',suspect.index.tolist())
 keep=[]
 stock_tokens=[s for s in suspect.index if s not in keep]
 too_short=diag.index[diag['valid days']<30].tolist()
-drop=set(stable_like)|set(too_short)|set(stock_tokens)
+drop=set(stable_like)|set(too_short)|set(stock_tokens)|set(leveraged)|set(duplicates)
 print(f"Numbers of remaining stablecoins: {len(stable_like)}  Stock tokens: {len(stock_tokens)}  "
-      f"Lack of data: {len(too_short)}  Sum: {len(drop)}")
+      f"Lack of data: {len(too_short)}  Leveraged: {len(leveraged)}  Near-duplicates: {len(duplicates)}  Sum: {len(drop)}")
+print('Leveraged:', leveraged, ' Near-duplicates:', duplicates)
 close_clean = close.drop(columns=list(drop), errors='ignore')
 volume_clean = volume.drop(columns=list(drop), errors='ignore')
 print("Strictly increasing",close_clean.index.is_monotonic_increasing)

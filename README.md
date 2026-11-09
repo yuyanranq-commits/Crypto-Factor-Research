@@ -7,6 +7,8 @@ The main point of the project is that the universe definition changes the conclu
 An earlier version used about 30 coins that are large today. On that universe an equal-weighted basket returned +42% a year.
 On the point-in-time universe built here, the same basket returned **−33% a year**.
 
+A follow-up project in [`delisting/`](delisting/) uses the same data to model which tokens Binance delists.
+
 ## Main findings
 
 | | Result |
@@ -27,6 +29,7 @@ factor.py      momentum, volatility, reversal factors; liquidity filter; look-ah
 utils.py       performance_stats (CAGR, Sharpe, MDD)
 backtest.ipynb   volatility factor: quantiles, long-short, long-only vs benchmark, size neutralization, diagnostics
 backtest2.ipynb  time-series vs cross-sectional momentum, 30/60/90/180-day lookbacks
+delisting/       which tokens get delisted: SQL database + survival model (see delisting/README.md)
 ```
 
 ### 1. Data (`scraper2.py`)
@@ -38,8 +41,10 @@ backtest2.ipynb  time-series vs cross-sectional momentum, 30/60/90/180-day lookb
 ### 2. Cleaning (`dataclean.py`)
 
 - **Ticker reuse.** Binance sometimes reuses a symbol for a different asset. For example, LUNA/USDT before and after the 2022 collapse. If a series has a gap longer than 7 days, the part after the gap becomes a new column (LUNA → LUNA2).
-- **Stablecoins.** Coins with daily return std < 0.005 are dropped.
+- **Stablecoins.** Coins with daily return std < 0.005 are dropped. A second test, median absolute daily return < 0.5%, catches stablecoins whose std is inflated by a single depeg (AEUR).
 - **Tokenized stocks.** Symbols ending in "B" and listed in 2025 or later are dropped.
+- **Leveraged tokens.** BULL and BEAR, plus any name that is another coin's ticker followed by UP/DOWN/BULL/BEAR.
+- **Near-duplicates.** If two coins' daily returns have correlation > 0.98 over at least 90 shared days, the later-listed one is dropped (BNSOL, Binance's staked SOL).
 - **Short series.** Coins with fewer than 30 valid days are dropped.
 
 ### 3. Factors and tradable universe (`factor.py`)
