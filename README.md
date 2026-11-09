@@ -13,12 +13,12 @@ A follow-up project in [`delisting/`](delisting/) uses the same data to model wh
 
 | | Result |
 |---|---|
-| Universe | ~690 USDT spot pairs scraped (198 already delisted); 571 coins enter the tradable universe at some point; median 78 tradable coins per day |
+| Universe | ~690 USDT spot pairs scraped (198 already delisted); 567 coins enter the tradable universe at some point; median 78 tradable coins per day |
 | Survivorship bias | Equal-weighted benchmark CAGR **+42%** (today's large coins) vs **−33%** (point-in-time universe) |
 | Volatility factor | Rank IC **−0.12**: low-volatility coins outperform. Still −0.11 after neutralizing for size |
 | Low-vol long-only | CAGR 9.8%, Sharpe 0.50 vs benchmark CAGR −33%, Sharpe −0.02 |
 | Momentum | Time-series momentum beats cross-sectional momentum at every lookback (30–180 days). Cross-sectional momentum loses money at every lookback |
-| Caveats | The long-short result (NAV ×354 after costs) comes almost entirely from shorting high-vol coins in 2025–26 and is not realistic. Low-vol long-only is negative in the last 30% of the sample |
+| Caveats | The long-short result (NAV ×355 after costs) comes almost entirely from shorting high-vol coins in 2025–26 and is not realistic. Low-vol long-only is negative in the last 30% of the sample |
 
 ## Pipeline
 
@@ -86,13 +86,13 @@ Most of the effect sits in the highest-volatility quintile.
 
 The benchmark has a Sharpe near zero but a CAGR of −33%. At 87% annual volatility, the volatility drag is large enough to turn a roughly zero average daily return into heavy compounding losses.
 
-**Stability.** The long leg has a Sharpe of 0.86 in the first 70% of the sample and −0.63 in the last 30%.
+**Stability.** The long leg has a Sharpe of 0.86 in the first 70% of the sample and −0.62 in the last 30%.
 
 ![Low-vol long vs benchmark](figures/Low-Vol%20Long%20vs.%20Equal-Weighted%20Market%20Benchmark.png)
 
 **Long-short (long Q1, short Q5)**
 
-Final NAV is 803 before costs and 354 after 10bp costs, with daily turnover of 0.38.
+Final NAV is 806 before costs and 355 after 10bp costs, with daily turnover of 0.38.
 This number should not be taken at face value:
 
 - Almost all of it comes from the short leg in 2025–26. In those two years the Q5 basket fell about 97% each year. The decline was broad (mean ≈ median daily return), not driven by a few collapses.
@@ -109,10 +109,10 @@ This number should not be taken at face value:
 
 | Lookback | TS Sharpe | CS Sharpe | TS CAGR | CS CAGR | TS turnover | CS turnover |
 |---|---|---|---|---|---|---|
-| 30 | **0.70** | −0.22 | 26.9% | −5.9% | 0.20 | 0.21 |
-| 60 | 0.39 | −0.72 | 5.6% | −14.2% | 0.16 | 0.17 |
-| 90 | 0.36 | −0.69 | 3.5% | −13.7% | 0.13 | 0.15 |
-| 180 | 0.04 | −0.66 | −15.5% | −13.2% | 0.12 | 0.13 |
+| 30 | **0.70** | −0.21 | 27.0% | −5.9% | 0.20 | 0.21 |
+| 60 | 0.40 | −0.72 | 5.7% | −14.2% | 0.16 | 0.17 |
+| 90 | 0.36 | −0.70 | 3.5% | −13.7% | 0.13 | 0.15 |
+| 180 | 0.04 | −0.66 | −15.6% | −13.2% | 0.12 | 0.13 |
 
 - TS momentum is better at every lookback, and shorter lookbacks work better.
 - Average net exposure of TS is only about +0.03, so the result is not just being long the market.
