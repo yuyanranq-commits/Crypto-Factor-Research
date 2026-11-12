@@ -43,9 +43,9 @@ delistings are events; the 8 cases where Binance removed only the USDT pair are 
 strictly before each cutoff. The notebook recomputes 800 values from raw prices in pandas: 0 mismatches.
 
 **Event = announcement.** Binance announces a delisting a median 14 days (at most 15) before trading stops, and the
-price moves on the notice, so the event is the announcement month and the asset leaves the risk set there. 41 of the 141
-dated notices fell in the calendar month before the last trading day. For 3 delistings no notice was found (MCO, HC, UTK);
-they fall back to the last trading day.
+price moves on the notice, so the event is the announcement month and the asset leaves the risk set there. 41 of the 144
+dated notices fell in the calendar month before the last trading day. If trading stopped before the notice
+(MCO, and HC, whose USDT pair was removed first), the asset exits at the last trading day.
 
 **Lagged features.** Delisted tokens trade a median 1.51× more in their last 30 days than in the 60 days before.
 The model uses features from 30 days before each month starts, well before any notice.
