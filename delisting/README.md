@@ -24,7 +24,7 @@ labels/exit_labels.csv     192 exits: delisting / rename / merger, scope, succes
 sql/01_daily.sql           trailing features per token-day (30/90/180-day windows, drawdown)
 sql/02_lifetimes.sql       one row per ticker: first/last trade, exit type and date, asset_id, left truncation
 sql/03_panel.sql           token-month panel with start/stop intervals and features as of each cutoff
-survival_analysis.ipynb    data checks, Cox model, proportional hazards, robustness, out-of-sample test
+survival_analysis.ipynb    data checks, Cox model, proportional hazards, robustness, bootstrap, out-of-sample test
 ```
 
 ```bash
@@ -59,6 +59,10 @@ The model uses features from 30 days before each month starts, well before any n
 - **Robustness.** Hazard ratios keep their sign and rough size when USDT-pair removals are added as events, uncertain labels are dropped,
   left-truncated tokens are dropped, or unlagged features are used (`results_robustness.csv`). Volume trend is the exception:
   HR 1.27 (p = 0.03) when the event was the last trading month, 1.04 (0.81–1.33) with the announcement month, so it is not a reliable signal.
+- **Batch announcements.** Binance delists in batches (up to 18 tokens in a month), so the model's standard errors are
+  too small. A cluster bootstrap that resamples whole calendar months (500 draws) widens the intervals but changes no
+  conclusion: volume 0.20–0.39, volatility for older tokens 1.40–2.82, drawdown for young tokens 1.71–7.22, and the
+  90-day return, the closest call, 0.32–0.93 (`results_bootstrap.csv`).
 - **Out of sample.** Walk-forward validation with an expanding window, refit once a year: 2025 is scored by a model fit on
   2020–24 (49 delistings), 2026 by a model refit on 2020–25 (90 delistings). The age interactions were found on the full sample;
   before 2025 alone the proportional hazards test finds nothing (p = 0.60), so the fair out-of-sample model is the five features
@@ -68,7 +72,7 @@ The model uses features from 30 days before each month starts, well before any n
 
 ## Limitations
 
-- Delistings come in same-day batches, so events are not independent and the confidence intervals are probably too narrow.
+- The out-of-sample test has only 87 delistings over 22 months, so its AUCs are noisy.
 - 136 events is a small sample, and only 17 delisted tokens were under two years old.
 - Age is observed age: for tokens already trading when the data starts, it counts from the first day in the data.
 - Tokens Binance had removed before the data was pulled are missing, so early years undercount delistings.

@@ -1,0 +1,8 @@
+,HR (model CI),bootstrap CI
+volume,0.29 (0.21–0.39),0.20–0.39
+volume_trend,1.04 (0.81–1.33),0.77–1.31
+return_90d,0.53 (0.40–0.71),0.32–0.93
+"volatility, older",2.11 (1.66–2.67),1.40–2.82
+"volatility, young",1.09 (0.60–1.97),0.57–1.75
+"drawdown, older",0.82 (0.47–1.42),0.18–1.42
+"drawdown, young",3.45 (1.93–6.15),1.71–7.22
