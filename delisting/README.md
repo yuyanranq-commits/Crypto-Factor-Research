@@ -12,7 +12,7 @@ of which tokens Binance announces it will delist. The database is built in SQL (
 | Strongest signal | 1 SD more trading volume → delisting hazard × **0.27** (95% CI 0.20–0.37) |
 | Event | The month Binance announces the delisting (median 14 days before trading stops), not the last trading day |
 | Age matters | For tokens under 2 years old, trading close to the all-time high raises the hazard (HR 3.45 per SD of drawdown, where drawdown = price / running max − 1); for older tokens, high volatility does (HR 2.11) |
-| Out of sample | Walk-forward, refit yearly: AUC **0.75** in 2025 and **0.76** in 2026, vs 0.69 and 0.73 for volume alone; each month's riskiest 10% of tokens contains 38% of the 2025–26 delisting announcements |
+| Out of sample | Walk-forward, refit yearly: AUC **0.75** in 2025 and **0.76** in 2026, vs 0.69 and 0.73 for volume alone; the age terms, which the pre-2026 data already flag, lift 2026 to **0.81**; each month's riskiest 10% of tokens contains 38% of the 2025–26 delisting announcements |
 
 ![Hazard ratios](figures/hazard_ratios.png)
 
@@ -64,9 +64,10 @@ The model uses features from 30 days before each month starts, well before any n
   conclusion: volume 0.20–0.39, volatility for older tokens 1.40–2.82, drawdown for young tokens 1.71–7.22, and the
   90-day return, the closest call, 0.32–0.93 (`results_bootstrap.csv`).
 - **Out of sample.** Walk-forward validation with an expanding window, refit once a year: 2025 is scored by a model fit on
-  2020–24 (49 delistings), 2026 by a model refit on 2020–25 (90 delistings). The age interactions were found on the full sample;
-  before 2025 alone the proportional hazards test finds nothing (p = 0.60), so the fair out-of-sample model is the five features
-  without interactions. Adding the interactions raises the pooled AUC from 0.742 to 0.785, which is optimistic.
+  2020–24 (49 delistings), 2026 by a model refit on 2020–25 (90 delistings). The age terms were found on the full sample,
+  so each fold adds them only if its own proportional hazards test rejects. Before 2025 it finds nothing (p = 0.60);
+  before 2026 it flags the same two features, volatility and drawdown (p = 0.009). With the age terms the 2026 AUC rises
+  from 0.760 to 0.811 (+0.05, paired bootstrap over months 0.03–0.08), so they improve the model out of sample.
 
 ![Out-of-sample risk deciles](figures/oos_risk_deciles.png)
 
