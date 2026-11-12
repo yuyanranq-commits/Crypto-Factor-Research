@@ -52,6 +52,9 @@ assert n == 0, f'{n} stopped tickers have no exit label'
 n = one('SELECT COUNT(*) FROM (SELECT symbol, month_start FROM panel GROUP BY ALL HAVING COUNT(*) > 1)')
 assert n == 0, f'{n} duplicate (symbol, month) rows in panel'
 
+n = one('SELECT COUNT(*) FROM (SELECT asset_id, month_start FROM panel GROUP BY ALL HAVING COUNT(*) > 1)')
+assert n == 0, f'{n} (asset, month) rows where two tickers of one asset overlap'
+
 n = one('SELECT COUNT(*) FROM panel WHERE stop_age <= start_age')
 assert n == 0, f'{n} empty intervals in panel'
 

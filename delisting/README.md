@@ -1,17 +1,18 @@
 # Which Binance Tokens Get Delisted? A Survival Analysis
 
 A point-in-time database of every Binance USDT spot token from 2020 to October 2026, and a time-varying Cox model
-of which tokens get delisted. The database is built in SQL (DuckDB); the model uses `lifelines`.
+of which tokens Binance announces it will delist. The database is built in SQL (DuckDB); the model uses `lifelines`.
 
 ## Main findings
 
 | | Result |
 |---|---|
-| Data | 587 tickers chained into 544 assets; 25,090 token-months; 136 delistings |
+| Data | 587 tickers chained into 544 assets; 25,049 token-months; 136 delisting announcements |
 | Labels | 192 tickers stopped trading: 144 delistings (8 of them only the USDT pair), 43 renames, 5 mergers, labeled by hand with sources |
 | Strongest signal | 1 SD more trading volume → delisting hazard × **0.27** (95% CI 0.20–0.37) |
-| Age matters | For tokens under 2 years old, trading close to the all-time high raises the hazard (HR 3.75 per SD of drawdown, where drawdown = price / running max − 1); for older tokens, high volatility does (HR 1.85) |
-| Out of sample | Walk-forward, refit yearly: AUC **0.75** in both 2025 and 2026, vs 0.70 and 0.73 for volume alone; each month's riskiest 10% of tokens contains 36% of the 2025–26 delistings |
+| Event | The month Binance announces the delisting (median 14 days before trading stops), not the last trading day |
+| Age matters | For tokens under 2 years old, trading close to the all-time high raises the hazard (HR 3.45 per SD of drawdown, where drawdown = price / running max − 1); for older tokens, high volatility does (HR 2.11) |
+| Out of sample | Walk-forward, refit yearly: AUC **0.75** in 2025 and **0.76** in 2026, vs 0.69 and 0.73 for volume alone; each month's riskiest 10% of tokens contains 38% of the 2025–26 delisting announcements |
 
 ![Hazard ratios](figures/hazard_ratios.png)
 
@@ -19,9 +20,9 @@ of which tokens get delisted. The database is built in SQL (DuckDB); the model u
 
 ```
 load_db.py                 builds crypto.duckdb and fails if any integrity check fails
-labels/exit_labels.csv     192 exits: delisting / rename / merger, scope, successor, source URL
+labels/exit_labels.csv     192 exits: delisting / rename / merger, scope, successor, announcement date, source URL
 sql/01_daily.sql           trailing features per token-day (30/90/180-day windows, drawdown)
-sql/02_lifetimes.sql       one row per ticker: first/last trade, exit type, asset_id, left truncation
+sql/02_lifetimes.sql       one row per ticker: first/last trade, exit type and date, asset_id, left truncation
 sql/03_panel.sql           token-month panel with start/stop intervals and features as of each cutoff
 survival_analysis.ipynb    data checks, Cox model, proportional hazards, robustness, out-of-sample test
 ```
@@ -41,8 +42,13 @@ delistings are events; the 8 cases where Binance removed only the USDT pair are 
 **No look-ahead.** Every feature window looks backward, and an `ASOF JOIN … ON cutoff > ts` takes the last trading day
 strictly before each cutoff. The notebook recomputes 800 values from raw prices in pandas: 0 mismatches.
 
-**Lagged features.** Delisted tokens trade a median 1.51× more in their last 30 days than in the 60 days before,
-because the delisting is announced in advance. The model uses features from 30 days before each month starts.
+**Event = announcement.** Binance announces a delisting a median 14 days (at most 15) before trading stops, and the
+price moves on the notice, so the event is the announcement month and the asset leaves the risk set there. 41 of the 141
+dated notices fell in the calendar month before the last trading day. For 3 delistings no notice was found (MCO, HC, UTK);
+they fall back to the last trading day.
+
+**Lagged features.** Delisted tokens trade a median 1.51× more in their last 30 days than in the 60 days before.
+The model uses features from 30 days before each month starts, well before any notice.
 
 ![Exits by year](figures/exits_by_year.png)
 
@@ -51,11 +57,12 @@ because the delisting is announced in advance. The model uses features from 30 d
 - **Proportional hazards.** Interacting every feature with log(age) finds that the effects of volatility and drawdown change
   with age (LR test p = 0.0001), so the main model lets them differ for tokens under 2 years old. The pattern holds with a 3-year cutoff.
 - **Robustness.** Hazard ratios keep their sign and rough size when USDT-pair removals are added as events, uncertain labels are dropped,
-  left-truncated tokens are dropped, or unlagged features are used (`results_robustness.csv`).
+  left-truncated tokens are dropped, or unlagged features are used (`results_robustness.csv`). Volume trend is the exception:
+  HR 1.27 (p = 0.03) when the event was the last trading month, 1.04 (0.81–1.33) with the announcement month, so it is not a reliable signal.
 - **Out of sample.** Walk-forward validation with an expanding window, refit once a year: 2025 is scored by a model fit on
   2020–24 (49 delistings), 2026 by a model refit on 2020–25 (90 delistings). The age interactions were found on the full sample;
-  before 2025 alone the proportional hazards test finds nothing (p = 0.68), so the fair out-of-sample model is the five features
-  without interactions. Adding the interactions raises the pooled AUC from 0.732 to 0.775, which is optimistic.
+  before 2025 alone the proportional hazards test finds nothing (p = 0.60), so the fair out-of-sample model is the five features
+  without interactions. Adding the interactions raises the pooled AUC from 0.742 to 0.785, which is optimistic.
 
 ![Out-of-sample risk deciles](figures/oos_risk_deciles.png)
 
@@ -63,5 +70,6 @@ because the delisting is announced in advance. The model uses features from 30 d
 
 - Delistings come in same-day batches, so events are not independent and the confidence intervals are probably too narrow.
 - 136 events is a small sample, and only 17 delisted tokens were under two years old.
+- Age is observed age: for tokens already trading when the data starts, it counts from the first day in the data.
 - Tokens Binance had removed before the data was pulled are missing, so early years undercount delistings.
 - Only USDT pairs on Binance spot are covered. 21 rename labels have no source link.

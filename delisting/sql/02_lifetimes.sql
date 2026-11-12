@@ -26,7 +26,12 @@ base as (
        END AS exit_type,
        e.delist_scope,
        e.successor,
-       e.needs_review
+       e.needs_review,
+       e.announcement_date,
+       -- exit_date: the day the asset leaves the risk set. Delistings end at the
+       -- announcement (fall back to last_date when no notice was found); all else at last_date.
+       CASE WHEN e.exit_type = 'delisting' THEN COALESCE(e.announcement_date, s.last_date)
+            ELSE s.last_date END AS exit_date
     FROM stats s
     CROSS JOIN sample_window w
     LEFT JOIN exit_labels e ON s.symbol = e.symbol
