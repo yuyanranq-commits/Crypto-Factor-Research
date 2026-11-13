@@ -68,12 +68,13 @@ def is_leveraged_name(base):
     return any(base.endswith(sfx) and base[:-len(sfx)] in bases for sfx in ['UP', 'DOWN', 'BULL', 'BEAR'])
 leveraged = [c for c in close.columns if is_leveraged_name(c.split('/')[0])]
 
-# Near-duplicate assets, e.g. BNSOL (Binance's staked SOL), which moves with SOL
-# (return correlation 0.999). Same idea as WBETH/BETH, already excluded in the scraper.
-# Rule: correlation > 0.98 over at least 90 shared days -> drop the one listed later.
-def near_duplicates(returns, listing_dates, threshold=0.98, min_days=90):
+# Derivatives of another coin (staked or wrapped versions) are excluded by name, with the reason, like WBETH/BETH
+# in the scraper. A high return correlation is only a hint: it can flag two different coins that moved together,
+# and it is measured over the whole sample, so it would use future prices to decide who enters the sample.
+# The scan below prints candidates for a manual check and deletes nothing.
+DERIVATIVES = {'BNSOL/USDT': "Binance's staked SOL (return correlation with SOL 0.999)"}
+def high_correlation_pairs(returns, threshold=0.98, min_days=90):
     has = returns.notna()
-    drop = []
     cols = returns.columns
     for i, a in enumerate(cols):
         for b in cols[i + 1:]:
@@ -82,24 +83,25 @@ def near_duplicates(returns, listing_dates, threshold=0.98, min_days=90):
                 continue
             corr = np.corrcoef(returns.loc[both, a], returns.loc[both, b])[0, 1]
             if corr > threshold:
-                later = a if listing_dates[a] > listing_dates[b] else b
-                print(f'near-duplicate: {a} ~ {b}  corr={corr:.4f} over {both.sum()} days -> drop {later}')
-                drop.append(later)
-    return drop
-listing_dates = close.apply(lambda s: s.first_valid_index())
-duplicates = near_duplicates(returns, listing_dates)
+                listed = 'excluded' if a in DERIVATIVES or b in DERIVATIVES else 'check by hand'
+                print(f'high correlation: {a} ~ {b}  corr={corr:.4f} over {both.sum()} days ({listed})')
+high_correlation_pairs(returns)
+duplicates = [c for c in DERIVATIVES if c in close.columns]
 
 diag['base']=diag.index.str.split('/').str[0]
 suspect=diag[diag['base'].str.endswith('B')&
              (pd.to_datetime(diag['crypto listing date'])>='2025-01-01')]
 print('Suspicious stock tokens:',suspect.index.tolist())
-keep=[]
+# YB (YieldBasis) is a crypto token whose ticker happens to end in B
+keep=['YB/USDT']
 stock_tokens=[s for s in suspect.index if s not in keep]
-too_short=diag.index[diag['valid days']<30].tolist()
-drop=set(stable_like)|set(too_short)|set(stock_tokens)|set(leveraged)|set(duplicates)
+# No minimum-history filter: whether a coin has 30 days of data is only known 30 days after it lists, so dropping
+# short series would remove exactly the coins that failed fast (survivorship bias). factor.py and the delisting
+# panel already require enough past data at each date.
+drop=set(stable_like)|set(stock_tokens)|set(leveraged)|set(duplicates)
 print(f"Numbers of remaining stablecoins: {len(stable_like)}  Stock tokens: {len(stock_tokens)}  "
-      f"Lack of data: {len(too_short)}  Leveraged: {len(leveraged)}  Near-duplicates: {len(duplicates)}  Sum: {len(drop)}")
-print('Leveraged:', leveraged, ' Near-duplicates:', duplicates)
+      f"Leveraged: {len(leveraged)}  Derivatives: {len(duplicates)}  Sum: {len(drop)}")
+print('Leveraged:', leveraged, ' Derivatives:', duplicates)
 close_clean = close.drop(columns=list(drop), errors='ignore')
 volume_clean = volume.drop(columns=list(drop), errors='ignore')
 print("Strictly increasing",close_clean.index.is_monotonic_increasing)

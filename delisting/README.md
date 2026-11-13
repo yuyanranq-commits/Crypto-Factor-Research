@@ -7,7 +7,7 @@ of which tokens Binance announces it will delist. The database is built in SQL (
 
 | | Result |
 |---|---|
-| Data | 587 tickers chained into 544 assets; 25,049 token-months; 136 delisting announcements |
+| Data | 589 tickers chained into 546 assets; 25,051 token-months; 136 delisting announcements |
 | Labels | 192 tickers stopped trading: 144 delistings (8 of them only the USDT pair), 43 renames, 5 mergers, labeled by hand with sources |
 | Strongest signal | 1 SD more trading volume → delisting hazard × **0.26** (95% CI 0.19–0.35) |
 | Event | The month Binance announces the delisting (median 14 days before trading stops), not the last trading day |

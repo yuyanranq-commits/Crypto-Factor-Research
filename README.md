@@ -4,7 +4,7 @@ Daily cross-sectional factor research on Binance USDT spot pairs, 2020-01 to 202
 The universe includes coins that were later delisted, and each day only coins that were liquid *at that time* can be traded.
 
 The main point of the project is that the universe definition changes the conclusions a lot.
-Using only the 54 coins that are still liquid at the end of the sample, an equal-weighted basket returned +41% a year.
+Using only the 55 coins that are still liquid at the end of the sample, an equal-weighted basket returned +41% a year.
 On the point-in-time universe built here, the same basket returned **−34% a year**.
 
 A follow-up project in [`delisting/`](delisting/) uses the same data to model which tokens Binance delists.
@@ -13,18 +13,18 @@ A follow-up project in [`delisting/`](delisting/) uses the same data to model wh
 
 | | Result |
 |---|---|
-| Universe | ~690 USDT spot pairs scraped (198 already delisted); 544 assets after chaining renames; 530 enter the tradable universe at some point; median 78 tradable coins per day |
-| Survivorship bias | Equal-weighted benchmark CAGR **+41%** (54 coins liquid today) vs **−34%** (point-in-time universe) |
+| Universe | ~690 USDT spot pairs scraped (198 already delisted); 546 assets after chaining renames; 531 enter the tradable universe at some point; median 78 tradable coins per day |
+| Survivorship bias | Equal-weighted benchmark CAGR **+41%** (55 coins liquid today) vs **−34%** (point-in-time universe) |
 | Volatility factor | Rank IC **−0.12**: low-volatility coins outperform. Still −0.11 after neutralizing for size |
-| Low-vol long-only | CAGR 9.4%, Sharpe 0.50 vs benchmark CAGR −34%, Sharpe −0.03 |
+| Low-vol long-only | CAGR 9.5%, Sharpe 0.50 vs benchmark CAGR −34%, Sharpe −0.03 |
 | Momentum | Time-series momentum beats cross-sectional momentum at every lookback (30–180 days). Cross-sectional momentum loses money at every lookback |
-| Caveats | The long-short result (NAV ×410 after costs) comes almost entirely from shorting high-vol coins in 2025–26 and is not realistic. Low-vol long-only is negative in the last 30% of the sample |
+| Caveats | The long-short result (NAV ×408 after costs) comes almost entirely from shorting high-vol coins in 2025–26 and is not realistic. Low-vol long-only is negative in the last 30% of the sample |
 
 ## Pipeline
 
 ```
 scraper2.py    Binance USDT spot pairs (incl. delisted) -> data/raw/*.csv -> data/wide_close.csv, wide_volume.csv
-dataclean.py   split series at long gaps, drop stablecoins / stock tokens / too-short series -> data/close_clean.csv
+dataclean.py   split series at long gaps, drop stablecoins / stock tokens / leveraged and staked tokens -> data/close_clean.csv
 delisting/load_db.py  chain renames into assets, split-adjust prices -> data/asset_close.csv, asset_dollar_volume.csv
 factor.py      momentum, volatility, reversal factors; liquidity filter; look-ahead check -> data/*_factor.csv
 utils.py       load_prices (asset-level prices), hold_through_halts, performance_stats (CAGR, Sharpe, MDD)
@@ -43,10 +43,10 @@ delisting/       which tokens get delisted: SQL database + survival model (see d
 
 - **Ticker reuse.** Binance sometimes reuses a symbol for a different asset. For example, LUNA/USDT before and after the 2022 collapse. If a series has a gap longer than 7 days, the part after the gap becomes a new column (LUNA → LUNA2).
 - **Stablecoins.** Coins with daily return std < 0.005 are dropped. A second test, median absolute daily return < 0.5%, catches stablecoins whose std is inflated by a single depeg (AEUR).
-- **Tokenized stocks.** Symbols ending in "B" and listed in 2025 or later are dropped.
+- **Tokenized stocks.** Symbols ending in "B" and listed in 2025 or later are dropped, except YB (YieldBasis), a crypto token.
 - **Leveraged tokens.** BULL and BEAR, plus any name that is another coin's ticker followed by UP/DOWN/BULL/BEAR.
-- **Near-duplicates.** If two coins' daily returns have correlation > 0.98 over at least 90 shared days, the later-listed one is dropped (BNSOL, Binance's staked SOL).
-- **Short series.** Coins with fewer than 30 valid days are dropped.
+- **Staked or wrapped versions of another coin** are dropped by name, with the reason (BNSOL, Binance's staked SOL). A scan for return correlation > 0.98 only prints candidates to check by hand: correlation is measured over the whole sample, so dropping on it would use future prices to decide who enters the sample.
+- **No minimum history.** A coin is kept however short its series. Whether it has 30 days of data is only known 30 days after it lists, so a minimum would drop exactly the coins that failed fast. The factors and the delisting panel require enough past data at each date instead.
 
 ### 2b. Assets, not tickers (`delisting/load_db.py`, `utils.load_prices`)
 
@@ -92,7 +92,7 @@ Mean daily return by volatility quintile (Q1 = lowest vol):
 
 | Q1 | Q2 | Q3 | Q4 | Q5 |
 |---|---|---|---|---|
-| +0.100% | +0.075% | +0.040% | +0.049% | **−0.291%** |
+| +0.100% | +0.075% | +0.039% | +0.048% | **−0.290%** |
 
 Most of the effect sits in the highest-volatility quintile.
 
@@ -100,12 +100,12 @@ Most of the effect sits in the highest-volatility quintile.
 
 | | CAGR | Sharpe | Max drawdown | Ann. vol |
 |---|---|---|---|---|
-| Low-vol long (Q1) | 9.4% | 0.50 | −89% | 73% |
+| Low-vol long (Q1) | 9.5% | 0.50 | −89% | 73% |
 | Benchmark | −33.6% | −0.03 | −99% | 87% |
 
 The benchmark has a Sharpe near zero but a CAGR of −34%. At 87% annual volatility, the volatility drag is large enough to turn a roughly zero average daily return into heavy compounding losses.
 
-**Stability.** The long leg has a Sharpe of 0.85 in the first 70% of the sample and −0.62 in the last 30%.
+**Stability.** The long leg has a Sharpe of 0.85 in the first 70% of the sample and −0.61 in the last 30%.
 
 **Delisting returns.** A position still held after an asset's last trade exits at the last traded price. Charging a
 CRSP-style delisting return on the day after the last trade instead changes little: of 127 delistings in the backtest
@@ -113,15 +113,15 @@ window, 17 were still in the tradable universe that day and none was held by the
 
 | Delisting return | Low-vol long CAGR | Sharpe | Benchmark CAGR | Sharpe |
 |---|---|---|---|---|
-| 0% (default) | 9.4% | 0.50 | −33.6% | −0.03 |
-| −30% | 9.4% | 0.50 | −34.2% | −0.04 |
-| −100% | 9.4% | 0.50 | −35.8% | −0.07 |
+| 0% (default) | 9.5% | 0.50 | −33.6% | −0.03 |
+| −30% | 9.5% | 0.50 | −34.3% | −0.04 |
+| −100% | 9.5% | 0.50 | −35.8% | −0.07 |
 
 ![Low-vol long vs benchmark](figures/Low-Vol%20Long%20vs.%20Equal-Weighted%20Market%20Benchmark.png)
 
 **Long-short (long Q1, short Q5)**
 
-Final NAV is 928 before costs and 410 after 10bp costs, with daily turnover of 0.38.
+Final NAV is 924 before costs and 408 after 10bp costs, with daily turnover of 0.38.
 This number should not be taken at face value:
 
 - Almost all of it comes from the short leg in 2025–26. In those two years the Q5 basket fell about 97% each year. The decline was broad (mean ≈ median daily return), not driven by a few collapses.
@@ -159,7 +159,7 @@ This number should not be taken at face value:
   leaves the low-vol result unchanged and lowers the benchmark slightly (see section 4).
 - **Data scope.** One exchange (Binance spot) only, and daily bars only.
 - **Thin recent universe.** In 2026 the average tradable universe is about 40 coins, so each quintile has only ~8 coins.
-- **Cleaning rules.** Thresholds such as std < 0.005, the 7-day gap and the "B" suffix rule are simple heuristics, checked by hand on this dataset.
+- **Cleaning rules.** Thresholds such as std < 0.005, the 7-day gap and the "B" suffix rule are simple heuristics, checked by hand on this dataset. Every coin they drop is a stablecoin, a stock token, a leveraged token or BNSOL; none is a delisted ordinary token.
 
 ## How to run
 
