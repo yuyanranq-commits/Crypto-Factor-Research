@@ -19,7 +19,7 @@ of which tokens Binance announces it will delist. The database is built in SQL (
 ## Pipeline
 
 ```
-load_db.py                 builds crypto.duckdb and fails if any integrity check fails
+load_db.py                 builds crypto.duckdb, fails if any integrity check fails, exports asset-level prices for factor.py
 labels/exit_labels.csv     192 exits: delisting / rename / merger, scope, successor, swap ratio, announcement date, source URL
 labels/redenominations.csv 6 redenominations that kept the ticker (SUN 1:1000, QUICK 1:1000, ...), with sources
 sql/01_daily.sql           trailing features per token-day (30/90/180-day windows, drawdown)

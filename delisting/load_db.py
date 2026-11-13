@@ -116,4 +116,14 @@ delisted = one("SELECT COUNT(*) FROM lifetimes WHERE exit_type = 'delisting' AND
 assert events == delisted, f'{events} event rows but {delisted} delisted tokens'
 
 print(f'all checks passed: {events} delistings, {one("SELECT COUNT(DISTINCT asset_id) FROM panel")} assets')
+
+# Asset-level daily panels for the factor research (factor.py, backtests): one column per asset_id, renames chained,
+# prices split-adjusted. NaN where the asset did not trade (halts, before listing, after the last trade).
+daily = con.execute('SELECT ts, asset_id, adj_close, dollar_volume FROM daily').df()
+dates = pd.date_range(*con.execute('SELECT sample_start, sample_end FROM sample_window').fetchone(), name='ts')
+for col, name in [('adj_close', 'asset_close.csv'), ('dollar_volume', 'asset_dollar_volume.csv')]:
+    wide = daily.pivot(index='ts', columns='asset_id', values=col)
+    wide.index = pd.to_datetime(wide.index)
+    wide.reindex(dates).to_csv(ROOT / 'data' / name)
+print(f'wrote data/asset_close.csv and data/asset_dollar_volume.csv: {daily.asset_id.nunique()} assets')
 con.close()

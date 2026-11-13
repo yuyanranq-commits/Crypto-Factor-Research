@@ -1,30 +1,33 @@
 import pandas as pd
 import numpy as np
-close=pd.read_csv('data/close_clean.csv',index_col=0, parse_dates=True)
-volume=pd.read_csv('data/volume_clean.csv',index_col=0, parse_dates=True)
+from utils import load_prices
+# Asset-level prices from delisting/load_db.py: renames chained, redenominations adjusted, halts held through
+close, dollar_volume, traded = load_prices()
 returns = close.pct_change(fill_method=None)
+# One-day returns only (the asset traded today and yesterday), so a halt's multi-day move does not inflate volatility
+one_day_returns = returns.where(traded & traded.shift(1, fill_value=False))
 mom_raw=close.pct_change(periods=20,fill_method=None)
-vol_raw = returns.rolling(window=20, min_periods=15).std().replace([np.inf, -np.inf], np.nan)
+vol_raw = one_day_returns.rolling(window=20, min_periods=15).std().replace([np.inf, -np.inf], np.nan)
 rev_raw = -close.pct_change(periods=5, fill_method=None).replace([np.inf, -np.inf], np.nan)
-def make_factors(df,close,volume,threshold=10_000_000,shift=True):
-    dollar_volume = volume * close
+def make_factors(df,dollar_volume,traded,threshold=10_000_000,shift=True):
     adv = dollar_volume.rolling(window=20, min_periods=15).mean().shift(1)
     if shift:
         df_base=df.shift(1)
     else:
         df_base = df
-    tradable = (adv >= threshold).astype(bool)
+    # A position for day t is set at the close of t-1, so the asset must have traded on t-1
+    tradable = (adv >= threshold) & traded.shift(1, fill_value=False)
     df_t = df_base.where(tradable)
     def cross_sectional_zscore(df1):
         return df1.sub(df1.mean(axis=1), axis=0).div(df1.std(axis=1), axis=0)
     df_z = cross_sectional_zscore(df_t)
     return df_z
-mom=make_factors(mom_raw,close,volume,shift=False)
-mom_factor=make_factors(mom_raw,close,volume,shift=True)
-vol=make_factors(vol_raw,close,volume,shift=False)
-vol_factor=make_factors(vol_raw,close,volume,shift=True)
-rev=make_factors(rev_raw,close,volume,shift=False)
-rev_factor=make_factors(rev_raw,close,volume,shift=True)
+mom=make_factors(mom_raw,dollar_volume,traded,shift=False)
+mom_factor=make_factors(mom_raw,dollar_volume,traded,shift=True)
+vol=make_factors(vol_raw,dollar_volume,traded,shift=False)
+vol_factor=make_factors(vol_raw,dollar_volume,traded,shift=True)
+rev=make_factors(rev_raw,dollar_volume,traded,shift=False)
+rev_factor=make_factors(rev_raw,dollar_volume,traded,shift=True)
 
 from scipy.stats import spearmanr
 def quick_ic(factor, ret):
