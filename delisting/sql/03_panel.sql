@@ -28,18 +28,18 @@ cutoffs AS (
     FROM months
 ),
 f0 AS (
-       --Last trading day features strictly before cut0
+       --The asset's last trading day features strictly before cut0 (any of its tickers)
     SELECT c.symbol, c.month_start, d.dv30, d.dv180, d.vol30, d.ret90, d.drawdown, d.n_obs30
     FROM cutoffs c
     ASOF LEFT JOIN daily d
-      ON c.symbol = d.symbol AND c.cut0 > d.ts
+      ON c.asset_id = d.asset_id AND c.cut0 > d.ts
 ),
 f30 AS (
-       --Last trading day features strictly before cut30
+       --The asset's last trading day features strictly before cut30 (any of its tickers)
     SELECT c.symbol, c.month_start, d.dv30, d.dv180, d.vol30, d.ret90, d.drawdown, d.n_obs30
     FROM cutoffs c
     ASOF LEFT JOIN daily d
-      ON c.symbol = d.symbol AND c.cut30 > d.ts
+      ON c.asset_id = d.asset_id AND c.cut30 > d.ts
 )
        --gather together
 SELECT

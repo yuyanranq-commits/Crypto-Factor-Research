@@ -22,18 +22,25 @@ labels_path = (HERE / 'labels' / 'exit_labels.csv').as_posix()
 con.execute(f"CREATE OR REPLACE TABLE exit_labels AS SELECT * FROM read_csv_auto('{labels_path}')")
 
 # assets: follow rename chains back to the first ticker (STRAT -> STRAX -> STRAX2 all get STRAT)
-renames = con.execute("SELECT symbol, successor FROM exit_labels WHERE exit_type = 'rename'").df()
+renames = con.execute("SELECT symbol, successor, swap_ratio FROM exit_labels WHERE exit_type = 'rename'").df()
+assert renames['swap_ratio'].notna().all(), 'every rename needs a swap_ratio'
 prev = dict(zip(renames['successor'], renames['symbol']))
+ratio = dict(zip(renames['symbol'], renames['swap_ratio']))   # new tokens per old token
 
 
 def find_root(s):
+    # returns (root ticker, adj_factor); adj_factor turns this ticker's price into a price per root token,
+    # like a split adjustment: STRAX2 price x 10 = price per STRAX, since 1 STRAX became 10 STRAX2
+    factor = 1.0
     while s in prev:
         s = prev[s]
-    return s
+        factor *= ratio[s]
+    return s, factor
 
 
 symbols = con.execute('SELECT DISTINCT symbol FROM prices').df()['symbol']
-assets = pd.DataFrame({'symbol': symbols, 'asset_id': symbols.map(find_root)})
+roots = symbols.map(find_root)
+assets = pd.DataFrame({'symbol': symbols, 'asset_id': roots.str[0], 'adj_factor': roots.str[1]})
 con.register('assets_df', assets)
 con.execute('CREATE OR REPLACE TABLE assets AS SELECT * FROM assets_df')
 
@@ -48,6 +55,19 @@ one = lambda sql: con.execute(sql).fetchone()[0]
 
 n = one("SELECT COUNT(*) FROM lifetimes WHERE stopped AND exit_type NOT IN ('delisting', 'rename', 'merger')")
 assert n == 0, f'{n} stopped tickers have no exit label'
+
+n = one('SELECT COUNT(*) FROM (SELECT asset_id, ts FROM daily GROUP BY ALL HAVING COUNT(*) > 1)')
+assert n == 0, f'{n} days where two tickers of one asset both trade'
+
+# the official swap ratio should match the price jump across each rename (within 3x, the gap moves prices)
+bad = con.execute("""
+    SELECT e.symbol, e.swap_ratio, a.last_close / b.first_close AS implied
+    FROM exit_labels e
+    JOIN lifetimes a ON a.symbol = e.symbol
+    JOIN lifetimes b ON b.symbol = e.successor
+    WHERE e.exit_type = 'rename' AND abs(ln(a.last_close / b.first_close / e.swap_ratio)) > ln(3)
+""").df()
+assert bad.empty, f'swap ratios that do not match prices:\n{bad}'
 
 n = one('SELECT COUNT(*) FROM (SELECT symbol, month_start FROM panel GROUP BY ALL HAVING COUNT(*) > 1)')
 assert n == 0, f'{n} duplicate (symbol, month) rows in panel'
