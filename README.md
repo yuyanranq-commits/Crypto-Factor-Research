@@ -107,6 +107,16 @@ The benchmark has a Sharpe near zero but a CAGR of −34%. At 87% annual volatil
 
 **Stability.** The long leg has a Sharpe of 0.85 in the first 70% of the sample and −0.62 in the last 30%.
 
+**Delisting returns.** A position still held after an asset's last trade exits at the last traded price. Charging a
+CRSP-style delisting return on the day after the last trade instead changes little: of 127 delistings in the backtest
+window, 17 were still in the tradable universe that day and none was held by the low-vol long leg.
+
+| Delisting return | Low-vol long CAGR | Sharpe | Benchmark CAGR | Sharpe |
+|---|---|---|---|---|
+| 0% (default) | 9.4% | 0.50 | −33.6% | −0.03 |
+| −30% | 9.4% | 0.50 | −34.2% | −0.04 |
+| −100% | 9.4% | 0.50 | −35.8% | −0.07 |
+
 ![Low-vol long vs benchmark](figures/Low-Vol%20Long%20vs.%20Equal-Weighted%20Market%20Benchmark.png)
 
 **Long-short (long Q1, short Q5)**
@@ -143,6 +153,10 @@ This number should not be taken at face value:
 
 - **Statistical significance.** With about 6 years of daily data, the standard error of an annualized Sharpe ratio is roughly 1/√6 ≈ 0.4. The low-vol Sharpe of 0.50 is therefore not statistically different from zero. No correction is made for testing several factors and lookbacks.
 - **Costs.** The cost model is a flat 10bp on turnover. There is no slippage model, no market impact, and no funding or borrow cost for shorts.
+- **Delisting exits.** A delisted coin is sold at its last traded price. That price was usually reachable: 133 of the 136
+  token delistings were announced before trading stopped (median 14 days ahead). The 3 exceptions are HC and MCO,
+  whose trading stopped before the notice, and LUNA, halted on the day of the notice. A −30% or −100% delisting return
+  leaves the low-vol result unchanged and lowers the benchmark slightly (see section 4).
 - **Data scope.** One exchange (Binance spot) only, and daily bars only.
 - **Thin recent universe.** In 2026 the average tradable universe is about 40 coins, so each quintile has only ~8 coins.
 - **Cleaning rules.** Thresholds such as std < 0.005, the 7-day gap and the "B" suffix rule are simple heuristics, checked by hand on this dataset.

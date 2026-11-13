@@ -125,5 +125,9 @@ for col, name in [('adj_close', 'asset_close.csv'), ('dollar_volume', 'asset_dol
     wide = daily.pivot(index='ts', columns='asset_id', values=col)
     wide.index = pd.to_datetime(wide.index)
     wide.reindex(dates).to_csv(ROOT / 'data' / name)
-print(f'wrote data/asset_close.csv and data/asset_dollar_volume.csv: {daily.asset_id.nunique()} assets')
+# Token delistings with each asset's last trading day, for the delisting-return check in backtest.ipynb
+con.execute("""SELECT asset_id, last_date, announcement_date FROM lifetimes
+               WHERE exit_type = 'delisting' AND delist_scope = 'token' ORDER BY last_date""").df() \
+   .to_csv(ROOT / 'data' / 'asset_delistings.csv', index=False)
+print(f'wrote data/asset_close.csv, asset_dollar_volume.csv, asset_delistings.csv: {daily.asset_id.nunique()} assets')
 con.close()

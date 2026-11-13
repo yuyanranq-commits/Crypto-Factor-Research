@@ -44,3 +44,17 @@ def hold_through_halts(w, traded):
     alive = alive.reindex(index=w.index, columns=w.columns, fill_value=False)
     frozen = alive & ~can_trade
     return w.mask(frozen).ffill().where(frozen, w).fillna(0)
+
+
+def add_delisting_returns(returns, delistings, haircut):
+    """Charge a delisting return, as CRSP does for stocks.
+
+    A position still held on the day after an asset's last trade loses `haircut` (0.3 = -30%) on that day.
+    With haircut = 0 the position simply exits at the last traded price, which is the default in the backtests.
+    """
+    r = returns.copy()
+    for asset, last in zip(delistings['asset_id'], delistings['last_date']):
+        day = pd.Timestamp(last) + pd.Timedelta(days=1)
+        if asset in r.columns and day in r.index:
+            r.loc[day, asset] = -haircut
+    return r
