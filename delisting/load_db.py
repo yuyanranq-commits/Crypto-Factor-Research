@@ -25,24 +25,38 @@ con.execute(f"CREATE OR REPLACE TABLE exit_labels AS SELECT * FROM read_csv_auto
 renames = con.execute("SELECT symbol, successor, swap_ratio FROM exit_labels WHERE exit_type = 'rename'").df()
 assert renames['swap_ratio'].notna().all(), 'every rename needs a swap_ratio'
 prev = dict(zip(renames['successor'], renames['symbol']))
-ratio = dict(zip(renames['symbol'], renames['swap_ratio']))   # new tokens per old token
 
 
 def find_root(s):
-    # returns (root ticker, adj_factor); adj_factor turns this ticker's price into a price per root token,
-    # like a split adjustment: STRAX2 price x 10 = price per STRAX, since 1 STRAX became 10 STRAX2
-    factor = 1.0
     while s in prev:
         s = prev[s]
-        factor *= ratio[s]
-    return s, factor
+    return s
 
 
 symbols = con.execute('SELECT DISTINCT symbol FROM prices').df()['symbol']
-roots = symbols.map(find_root)
-assets = pd.DataFrame({'symbol': symbols, 'asset_id': roots.str[0], 'adj_factor': roots.str[1]})
+assets = pd.DataFrame({'symbol': symbols, 'asset_id': symbols.map(find_root)})
 con.register('assets_df', assets)
 con.execute('CREATE OR REPLACE TABLE assets AS SELECT * FROM assets_df')
+
+# adjustments: dated price adjustments per asset, like stock splits. ratio = new tokens per old token.
+# A rename takes effect on the successor's first trading day; a redenomination that kept the ticker
+# (SUN, QUICK, ...) on its ex_date. On any day, price x product(ratio of adjustments up to that day)
+# = price per original token, so a rename or redenomination leaves no jump in the series.
+redenom_path = (HERE / 'labels' / 'redenominations.csv').as_posix()
+con.execute(f"CREATE OR REPLACE TABLE redenominations AS SELECT * FROM read_csv_auto('{redenom_path}')")
+con.execute('''
+    CREATE OR REPLACE TABLE adjustments AS
+    SELECT a.asset_id, min(p.ts) AS ex_date, e.swap_ratio AS ratio, 'rename' AS kind
+    FROM exit_labels e
+    JOIN assets a ON a.symbol = e.symbol
+    JOIN prices p ON p.symbol = e.successor
+    WHERE e.exit_type = 'rename'
+    GROUP BY a.asset_id, e.swap_ratio
+    UNION ALL
+    SELECT a.asset_id, CAST(r.ex_date AS DATE), CAST(r.swap_ratio AS DOUBLE), 'redenomination'
+    FROM redenominations r
+    JOIN assets a ON a.symbol = r.symbol
+''')
 
 for f in ['01_daily.sql', '02_lifetimes.sql', '03_panel.sql']:
     con.execute((HERE / 'sql' / f).read_text(encoding='utf-8'))
@@ -68,6 +82,25 @@ bad = con.execute("""
     WHERE e.exit_type = 'rename' AND abs(ln(a.last_close / b.first_close / e.swap_ratio)) > ln(3)
 """).df()
 assert bad.empty, f'swap ratios that do not match prices:\n{bad}'
+
+# a redenomination's ratio should match the price jump across its ex_date (within 3x)
+bad = con.execute("""
+    SELECT r.symbol, r.ex_date, r.swap_ratio,
+           (SELECT arg_max(close, ts) FROM prices WHERE symbol = r.symbol AND ts < CAST(r.ex_date AS DATE)) /
+           (SELECT close FROM prices WHERE symbol = r.symbol AND ts = CAST(r.ex_date AS DATE)) AS implied
+    FROM redenominations r
+""").df()
+bad = bad[(bad['implied'] / bad['swap_ratio']).map(lambda x: not (1 / 3 < x < 3))]
+assert bad.empty, f'redenomination ratios that do not match prices:\n{bad}'
+
+# no unexplained jump: after adjustment, no move of more than 3x across a trading halt (2 to 7 days).
+# A one-day move that large can be real; one across a halt is almost always an unlabeled redenomination.
+bad = con.execute("""
+    SELECT symbol, ts, exp(log_ret) AS price_ratio
+    FROM (SELECT *, date_diff('day', lag(ts) OVER (PARTITION BY asset_id ORDER BY ts), ts) AS gap FROM daily)
+    WHERE gap >= 2 AND abs(log_ret) > ln(3)
+""").df()
+assert bad.empty, f'price jumps across a trading halt; add them to redenominations.csv:\n{bad}'
 
 n = one('SELECT COUNT(*) FROM (SELECT symbol, month_start FROM panel GROUP BY ALL HAVING COUNT(*) > 1)')
 assert n == 0, f'{n} duplicate (symbol, month) rows in panel'

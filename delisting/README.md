@@ -11,8 +11,8 @@ of which tokens Binance announces it will delist. The database is built in SQL (
 | Labels | 192 tickers stopped trading: 144 delistings (8 of them only the USDT pair), 43 renames, 5 mergers, labeled by hand with sources |
 | Strongest signal | 1 SD more trading volume → delisting hazard × **0.26** (95% CI 0.19–0.35) |
 | Event | The month Binance announces the delisting (median 14 days before trading stops), not the last trading day |
-| Age matters | For tokens under 2 years old, trading close to the all-time high raises the hazard (HR 3.62 per SD of drawdown, where drawdown = price / running max − 1); for older tokens, high volatility does (HR 2.10) |
-| Out of sample | Walk-forward, refit yearly: AUC **0.74** in 2025 and **0.73** in 2026, vs 0.69 and 0.73 for volume alone; the age terms lift 2026 to **0.79**, though the pre-2026 data back them only weakly; with them, each month's riskiest 10% of tokens contains 38% of the 2025–26 delisting announcements |
+| Age matters | For tokens under 2 years old, trading close to the all-time high raises the hazard (HR 3.62 per SD of drawdown, where drawdown = price / running max − 1); for older tokens, high volatility does (HR 2.12) |
+| Out of sample | Walk-forward, refit yearly: AUC **0.74** in both 2025 and 2026, vs 0.69 and 0.73 for volume alone; the age terms lift 2026 to **0.80**, though the pre-2026 data back them only weakly; with them, each month's riskiest 10% of tokens contains 38% of the 2025–26 delisting announcements |
 
 ![Hazard ratios](figures/hazard_ratios.png)
 
@@ -21,6 +21,7 @@ of which tokens Binance announces it will delist. The database is built in SQL (
 ```
 load_db.py                 builds crypto.duckdb and fails if any integrity check fails
 labels/exit_labels.csv     192 exits: delisting / rename / merger, scope, successor, swap ratio, announcement date, source URL
+labels/redenominations.csv 6 redenominations that kept the ticker (SUN 1:1000, QUICK 1:1000, ...), with sources
 sql/01_daily.sql           trailing features per token-day (30/90/180-day windows, drawdown)
 sql/02_lifetimes.sql       one row per ticker: first/last trade, exit type and date, asset_id, left truncation
 sql/03_panel.sql           token-month panel with start/stop intervals and features as of each cutoff
@@ -38,7 +39,9 @@ cd delisting && jupyter nbconvert --to notebook --execute --inplace survival_ana
 **Delisting vs rename.** A ticker that stops trading is often not a failure: MATIC became POL, FTM became S.
 Renames are chained into one asset, and age keeps counting across the rename. Features are computed per asset, not per
 ticker, with prices adjusted by the swap ratio like a stock split (1 NPXS became 0.001 PUNDIX), so a rename does not
-reset the 180-day windows or the all-time high. Mergers are censored. Only token-level
+reset the 180-day windows or the all-time high. Six tokens were redenominated without a ticker change after a halt of
+4 to 6 days (SUN, QUICK, BNX, COCOS, DREP, BTCST); they get the same split adjustment from `redenominations.csv`, and the
+build fails if any other price jump of more than 3x across a trading halt is left unexplained. Mergers are censored. Only token-level
 delistings are events; the 8 cases where Binance removed only the USDT pair are tested as a robustness check.
 
 **No look-ahead.** Every feature window looks backward, and an `ASOF JOIN … ON cutoff > ts` takes the last trading day
@@ -57,20 +60,20 @@ The model uses features from 30 days before each month starts, well before any n
 ## Model checks
 
 - **Proportional hazards.** Interacting every feature with log(age) finds that the effects of volatility and drawdown change
-  with age (LR test p = 0.0009), so the main model lets them differ for tokens under 2 years old. The pattern holds with a 3-year cutoff.
+  with age (LR test p = 0.0007), so the main model lets them differ for tokens under 2 years old. The pattern holds with a 3-year cutoff.
 - **Robustness.** Hazard ratios keep their sign and rough size when USDT-pair removals are added as events, uncertain labels are dropped,
   left-truncated tokens are dropped, or unlagged features are used (`results_robustness.csv`). Volume trend is the exception:
   HR 1.27 (p = 0.03) when the event was the last trading month, 1.05 (0.82–1.35) with the announcement month, so it is not a reliable signal.
 - **Batch announcements.** Binance delists in batches (up to 18 tokens in a month), so the model's standard errors are
   too small. A cluster bootstrap that resamples whole calendar months (500 draws) widens the intervals but changes no
-  conclusion: volume 0.19–0.39, volatility for older tokens 1.42–2.77, drawdown for young tokens 1.82–7.84, and the
+  conclusion: volume 0.19–0.39, volatility for older tokens 1.42–2.81, drawdown for young tokens 1.81–7.84, and the
   90-day return, the closest call, 0.31–0.92 (`results_bootstrap.csv`).
 - **Out of sample.** Walk-forward validation with an expanding window, refit once a year: 2025 is scored by a model fit on
   2020–24 (49 delistings), 2026 by a model refit on 2020–25 (90 delistings). The age terms were found on the full sample,
-  so each fold adds them only if its own proportional hazards test rejects. Before 2025 it finds nothing (p = 0.83);
-  before 2026 it rejects (p = 0.045), and the 2026 AUC rises from 0.733 to 0.792 (+0.06, paired bootstrap over months
+  so each fold adds them only if its own proportional hazards test rejects. Before 2025 it finds nothing (p = 0.82);
+  before 2026 it rejects (p = 0.038), and the 2026 AUC rises from 0.737 to 0.798 (+0.06, paired bootstrap over months
   0.04–0.09). The support is thin: before 2026 only volatility's age term is significant on its own (drawdown's has
-  p = 0.18), and most of the 2026 gain comes from the drawdown term.
+  p = 0.15), and most of the 2026 gain comes from the drawdown term.
 
 ![Out-of-sample risk deciles](figures/oos_risk_deciles.png)
 

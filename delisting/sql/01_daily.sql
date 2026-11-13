@@ -1,6 +1,7 @@
 CREATE OR REPLACE TABLE daily AS
 -- Features are computed per asset, not per ticker, so a rename does not reset them.
--- adj_close is the price per root token (split-adjusted with swap_ratio); dollar volume needs no adjustment.
+-- adj_close is the price per original token: close x the product of the asset's adjustment ratios up to that day
+-- (renames and redenominations, see load_db.py). Dollar volume needs no adjustment.
 with px as (
     select
        p.symbol,
@@ -8,7 +9,8 @@ with px as (
        p.ts,
        p.close,
        p.volume,
-       p.close * a.adj_factor as adj_close,
+       p.close * coalesce((select product(j.ratio) from adjustments j
+                           where j.asset_id = a.asset_id and j.ex_date <= p.ts), 1) as adj_close,
        p.close * p.volume as dollar_volume
     from prices p
     join assets a on p.symbol = a.symbol

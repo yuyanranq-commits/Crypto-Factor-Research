@@ -1,0 +1,7 @@
+symbol,ex_date,swap_ratio,source_url,note
+COCOS/USDT,2021-01-23,0.001,https://www.coindesk.com/price/cocos,"Supply cut from 100B to 100M on 2021-01-19 (1000 old COCOS = 1 new); trading resumed 2021-01-23 under the same ticker"
+BTCST/USDT,2021-03-19,10,https://www.aicoin.com/en/currencies/btcst,"1 old BTCST = 10 new BTCST (community vote, Feb 2021); spot trading reopened 2021-03-19"
+DREP/USDT,2021-04-02,0.01,https://coinmarketcap.com/id/currencies/drep/,"100 old DREP = 1 new DREP; max supply cut from 10B to 100M"
+SUN/USDT,2021-06-18,1000,https://kucoin.com/news/en-kucoin-will-support-the-token-redenomination-and-pgrade-of-sun,"1 old SUN (SUNOLD) = 1000 new SUN"
+BNX/USDT,2023-02-22,100,https://www.mexc.com/support/articles/15437179306777,"1 old BNX = 100 new BNX; Binance reopened BNX spot trading 2023-02-22"
+QUICK/USDT,2023-07-21,1000,https://chaincatcher.com/en/article/2097644,"1 old QUICK = 1000 new QUICK; old token became QUICKOLD on Binance"
