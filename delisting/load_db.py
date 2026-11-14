@@ -51,7 +51,7 @@ con.execute('''
     JOIN assets a ON a.symbol = e.symbol
     JOIN prices p ON p.symbol = e.successor
     WHERE e.exit_type = 'rename'
-    GROUP BY a.asset_id, e.swap_ratio
+    GROUP BY a.asset_id, e.symbol, e.swap_ratio   -- one row per rename, even if two share a ratio
     UNION ALL
     SELECT a.asset_id, CAST(r.ex_date AS DATE), CAST(r.swap_ratio AS DOUBLE), 'redenomination'
     FROM redenominations r
